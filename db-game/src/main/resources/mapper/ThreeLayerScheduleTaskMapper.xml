@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dtarmory.threelayerschedule.ThreeLayerScheduleTaskMapper">
+
+    <insert id="insertTask" parameterType="com.dtarmory.threelayerschedule.ScheduleTask">
+        insert into three_layer_schedule_task (
+        id, biz_type, biz_context, biz_id, create_at, update_at, retry_times, max_retry_times,retry_duration_in_second,
+        need_retry,status,cancel_reason,task_type,sub_task_count,parent_id,topic,tag
+        )
+        values
+        (
+        #{id, jdbcType=BIGINT},
+        #{bizType, jdbcType=VARCHAR},
+        #{bizContext, jdbcType=VARCHAR},
+        #{bizId, jdbcType=VARCHAR},
+        #{createdAt, jdbcType=TIMESTAMP},
+        #{updateAt, jdbcType=TIMESTAMP},
+        #{retryTimes, jdbcType=INTEGER},
+        #{maxRetryTimes, jdbcType=INTEGER},
+        #{retryDurationInSecond, jdbcType=INTEGER},
+        #{needRetry, jdbcType=BIT},
+        #{status, jdbcType=VARCHAR},
+        #{cancelReason, jdbcType=VARCHAR},
+        'MAIN',
+        #{subTaskCount, jdbcType=INTEGER},
+        #{id, jdbcType=BIGINT},
+        #{topic, jdbcType=VARCHAR},
+        #{tag, jdbcType=VARCHAR}
+        )
+    </insert>
+
+
+    <insert id="insertSubTask" parameterType="list">
+        insert into three_layer_schedule_task (
+        id, biz_type, biz_context, biz_id, create_at, update_at, retry_times, max_retry_times,retry_duration_in_second,
+        need_retry,status,cancel_reason,task_type,sub_task_count,parent_id,topic,tag,exec_result
+        )
+        values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (
+            #{item.id, jdbcType=BIGINT},
+            #{item.bizType, jdbcType=VARCHAR},
+            #{item.bizContext, jdbcType=VARCHAR},
+            #{item.bizId, jdbcType=VARCHAR},
+            #{item.createdAt, jdbcType=TIMESTAMP},
+            #{item.updateAt, jdbcType=TIMESTAMP},
+            #{item.retryTimes, jdbcType=INTEGER},
+            #{item.maxRetryTimes, jdbcType=INTEGER},
+            #{item.retryDurationInSecond, jdbcType=INTEGER},
+            #{item.needRetry, jdbcType=BIT},
+            #{item.status, jdbcType=VARCHAR},
+            #{item.cancelReason, jdbcType=VARCHAR},
+            'SUB',
+            0,
+            #{item.parentId, jdbcType=BIGINT},
+            #{item.topic, jdbcType=VARCHAR},
+            #{item.tag, jdbcType=VARCHAR},
+            #{item.execResult, jdbcType=VARCHAR}
+            )
+        </foreach>
+    </insert>
+
+    <select id="findSubTask" parameterType="long" resultType="com.dtarmory.threelayerschedule.SubTask">
+
+        select * from three_layer_schedule_task where id=#{id}
+    </select>
+
+    <select id="findTask" parameterType="long" resultType="com.dtarmory.threelayerschedule.ScheduleTask">
+
+        select * from three_layer_schedule_task where id=#{id}
+    </select>
+
+    <select id="findSubTasks" parameterType="long" resultType="com.dtarmory.threelayerschedule.SubTask">
+
+        select * from three_layer_schedule_task where
+        parent_id=#{parentId} and
+        task_type='SUB'
+    </select>
+
+    <update id="finishTask" parameterType="com.dtarmory.threelayerschedule.ScheduleTask">
+
+        update three_layer_schedule_task set
+        status='SUCCESS',
+        update_at=now(),
+        exec_result=#{execResult, jdbcType=VARCHAR}
+        where id=#{id}
+    </update>
+
+    <update id="finishSubTask" parameterType="com.dtarmory.threelayerschedule.SubTask">
+
+        update three_layer_schedule_task set
+        status='SUCCESS',
+        update_at=now(),
+        exec_result=#{execResult, jdbcType=VARCHAR}
+        where id=#{id}
+    </update>
+
+    <select id="countFinishedSubTask" resultType="int">
+
+        select count(id) from three_layer_schedule_task where
+        status='SUCCESS' and
+        parent_id=#{parentId} and
+        task_type='SUB'
+    </select>
+
+    <insert id="copyToHistoryTable" parameterType="list">
+
+        insert into three_layer_schedule_task_history
+        select * from three_layer_schedule_task
+        where id in
+        <foreach collection="ids" separator="," open="(" close=")" index="index" item="id">
+            #{id}
+        </foreach>
+    </insert>
+
+    <delete id="deleteTasks" parameterType="list">
+
+        delete from three_layer_schedule_task
+        where id in
+        <foreach collection="ids" separator="," open="(" close=")" index="index" item="id">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>
